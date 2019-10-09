@@ -1,4 +1,13 @@
+'''
+Integration graphique sous PyQt
+http://www.pyqtgraph.org/
 
+Les exemples sont sous:
+C:/Users/Proprietaire/Documents/tmp/test-jsc-1
+
+Exemple pour utiliser PyQt et le port seriel par l’utilisation d’une thread.
+https://iosoft.blog/2019/04/30/pyqt-serial-terminal/
+'''
 
 import sys
 import numpy as np
@@ -74,6 +83,7 @@ class MyWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.serialThread = SerialThread(portname, baudrate)
         self.serialThread.signalData.connect(self.rxData)
         self.serialThread.start()
+        self.dataFIFO = np.array([])
 
     def doTest(self):
         print("doTest")
@@ -82,8 +92,15 @@ class MyWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def rxData(self, data):
         print("rxData: {}".format(data))
-        d = np.array([1000, data, 1023])
-        self.graphicsView.plot(d)
+
+        # Peut-être ceci pour régler le problème de performance:
+        # https://www.oreilly.com/library/view/python-cookbook/0596001673/ch17s15.html
+        self.dataFIFO = np.append(self.dataFIFO, data)
+        while self.dataFIFO.size > 1024:
+            # Voir ceci pour problème de performance:
+            # https://stackoverflow.com/questions/42771110/fastest-way-to-left-cycle-a-numpy-array-like-pop-push-for-a-queue
+            self.dataFIFO = np.delete(self.dataFIFO, 0)
+        self.graphicsView.plot(self.dataFIFO)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
